@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detective Vehicle Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+</head>
+<body>
+
+    <div class="layout-container">
+
+        <div class="sidebar">
+            <div class="menu-icon">☰</div>
+            <div class="menu-item">
+                <button type="button" class="BUT active" onclick="setActive(this)">กล้อง 1</button>
+            </div>
+            <div class="menu-item">
+                <button type="button" class="BUT" onclick="setActive(this)">กล้อง 2</button>
+            </div>
+        </div>
+
+        <div class="main-content">
+            
+            <div class="top-section">
+                <div class="video-box">
+                    <div class="video-container">
+                        <img src="{{ url_for('video_feed') }}" class="video-REAL" alt="CCTV Stream">
+                    </div>
+                </div>
+
+                <div class="stats-container">
+                    <div class="stat-box">
+                        <div class="stat-header">
+                            <span>รถเข้า (IN)</span>
+                            <div class="rate-box">
+                                <p>สถานะ</p>
+                                <div class="rate-blank bg-green">Active</div>
+                            </div>
+                        </div>
+                        <div class="stat-body">
+                            <span>สะสม</span>
+                            <span class="number" id="car-in">0</span>
+                            <span>คัน</span>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-box">
+                        <div class="stat-header">
+                            <span>รถออก (OUT)</span>
+                            <div class="rate-box">
+                                <p>สถานะ</p>
+                                <div class="rate-blank bg-red">Active</div>
+                            </div>
+                        </div>
+                        <div class="stat-body">
+                            <span>สะสม</span>
+                            <span class="number" id="car-out">0</span>
+                            <span>คัน</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bottom-section">
+                <div class="graph-box">
+                    <div class="graph-header">
+                        <span>กราฟแสดงปริมาณรถตามเวลา</span>
+                        <span class="zoom-text">* อัปเดต Real-time</span>
+                    </div>
+                    <div class="graph-area">
+                        <canvas id="vehicleChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="graph-legend">
+                    <div><span class="color-box black"></span> จำนวนรถเข้า</div>
+                    <div><span class="color-box red"></span> จำนวนรถออก</div>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script src="script.js"></script>
+
+</body>
+</html>
