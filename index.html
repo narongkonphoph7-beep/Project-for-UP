@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="th">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,6 +8,7 @@
     <link rel="stylesheet" href="styles.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
+
 <body>
 
     <div class="layout-container">
@@ -19,74 +21,155 @@
             <div class="menu-item">
                 <button type="button" class="BUT inactive" onclick="setActive(this)">Camera 2</button>
             </div>
+            <div class="menu-item">
+                <button type="button" class="BUT inactive stats-btn" onclick="switchView('stats')">📊 สถิติ</button>
+            </div>
         </div>
 
         <div class="main-content">
+            <div id="dashboard-view" style="display:flex; flex-direction:column; gap:12px; height:100%;">
+                <div class="top-section">
 
-            <div class="top-section">
-
-                <div class="video-box">
-                    <div class="video-container">
-                        <img src="{{ url_for('video_feed') }}" class="video-REAL" alt="CCTV Stream">
+                    <div class="video-box">
+                        <div class="video-container">
+                            <img src="{{ url_for('video_feed') }}" class="video-REAL" alt="CCTV Stream">
+                        </div>
                     </div>
-                </div>
 
-                <div class="stats-container">
+                    <div class="stats-container">
 
-                    <div class="stat-box stat-box-in">
-                        <div class="stat-header">
-                            <span>รถเข้า (IN)</span>
-                            <div class="rate-box">
-                                <p>สถานะ</p>
-                                <div id="status-in" class="status-badge active">Active</div>
+                        <div class="stat-box stat-box-in">
+                            <div class="stat-header">
+                                <span>รถเข้า (IN)</span>
+                                <div class="rate-box">
+                                    <p>สถานะ</p>
+                                    <div id="status-in" class="status-badge active">Active</div>
+                                </div>
+                            </div>
+                            <div class="stat-body">
+                                <span>สะสม</span>
+                                <span class="number" id="car-in">0</span>
+                                <span>คัน</span>
                             </div>
                         </div>
-                        <div class="stat-body">
-                            <span>สะสม</span>
-                            <span class="number" id="car-in">0</span>
-                            <span>คัน</span>
-                        </div>
-                    </div>
 
-                    <div class="stat-box stat-box-out">
-                        <div class="stat-header">
-                            <span>รถออก (OUT)</span>
-                            <div class="rate-box">
-                                <p>สถานะ</p>
-                                <div id="status-out" class="status-badge active">Active</div>
+                        <div class="stat-box stat-box-out">
+                            <div class="stat-header">
+                                <span>รถออก (OUT)</span>
+                                <div class="rate-box">
+                                    <p>สถานะ</p>
+                                    <div id="status-out" class="status-badge active">Active</div>
+                                </div>
+                            </div>
+                            <div class="stat-body">
+                                <span>สะสม</span>
+                                <span class="number" id="car-out">0</span>
+                                <span>คัน</span>
                             </div>
                         </div>
-                        <div class="stat-body">
-                            <span>สะสม</span>
-                            <span class="number" id="car-out">0</span>
-                            <span>คัน</span>
+
+                    </div>
+                </div>
+
+                <div class="bottom-section">
+                    <div class="graph-box">
+                        <div class="graph-header">
+                            <span>กราฟแสดงปริมาณรถตามเวลา</span>
+                            <span class="zoom-text">* อัปเดต Real-time</span>
+                        </div>
+                        <div class="graph-area">
+                            <canvas id="vehicleChart"></canvas>
                         </div>
                     </div>
 
-                </div>
-            </div>
-
-            <div class="bottom-section">
-                <div class="graph-box">
-                    <div class="graph-header">
-                        <span>กราฟแสดงปริมาณรถตามเวลา</span>
-                        <span class="zoom-text">* อัปเดต Real-time</span>
-                    </div>
-                    <div class="graph-area">
-                        <canvas id="vehicleChart"></canvas>
+                    <div class="graph-legend">
+                        <div><span class="color-box blue"></span> จำนวนรถเข้า</div>
+                        <div><span class="color-box red"></span> จำนวนรถออก</div>
                     </div>
                 </div>
 
-                <div class="graph-legend">
-                    <div><span class="color-box blue"></span> จำนวนรถเข้า</div>
-                    <div><span class="color-box red"></span> จำนวนรถออก</div>
+            </div>
+            <div id="stats-view" style="display:none;">
+                <div class="sv-header">
+                    <button class="sv-back-btn" onclick="switchView('dashboard')">← กลับหน้าหลัก</button>
+                    <div class="sv-title-block">
+                        <h1 class="sv-title">Vehicle Statistics</h1>
+                        <span class="sv-subtitle">สรุปข้อมูลการตรวจจับยานพาหนะ Real-time</span>
+                    </div>
+                    <div class="sv-live-badge"><span class="sv-pulse-dot"></span> Live Data</div>
+                </div>
+                <div class="sv-cards-row">
+                    <div class="sv-card sv-card-green">
+                        <div class="sv-card-label">ยอดรวมรถเข้า</div>
+                        <div class="sv-card-value" id="sv-total-in">0</div>
+                        <div class="sv-card-unit">คัน</div>
+                        <div class="sv-card-glow" style="background:#28a745;"></div>
+                    </div>
+                    <div class="sv-card sv-card-red">
+                        <div class="sv-card-label">ยอดรวมรถออก</div>
+                        <div class="sv-card-value" id="sv-total-out">0</div>
+                        <div class="sv-card-unit">คัน</div>
+                        <div class="sv-card-glow" style="background:#dc3545;"></div>
+                    </div>
+                    <div class="sv-card sv-card-purple">
+                        <div class="sv-card-label">รถภายในพื้นที่</div>
+                        <div class="sv-card-value" id="sv-net">0</div>
+                        <div class="sv-card-unit">คัน (IN − OUT)</div>
+                        <div class="sv-card-glow" style="background:#7c3aed;"></div>
+                    </div>
+                    <div class="sv-card sv-card-amber">
+                        <div class="sv-card-label">เข้าล่าสุด</div>
+                        <div class="sv-card-value sv-card-time-val" id="sv-last-in">--:--:--</div>
+                        <div class="sv-card-unit">เวลาล่าสุด</div>
+                        <div class="sv-card-glow" style="background:#f59e0b;"></div>
+                    </div>
+                    <div class="sv-card sv-card-blue">
+                        <div class="sv-card-label">ออกล่าสุด</div>
+                        <div class="sv-card-value sv-card-time-val" id="sv-last-out">--:--:--</div>
+                        <div class="sv-card-unit">เวลาล่าสุด</div>
+                        <div class="sv-card-glow" style="background:#3b82f6;"></div>
+                    </div>
+                </div>
+                <div class="sv-charts-row">
+                    <div class="sv-box">
+                        <div class="sv-box-header">
+                            <span class="sv-box-title">📊 กราฟยอดรายช่วงเวลา (Session นี้)</span>
+                            <div class="sv-legend">
+                                <span class="sv-legend-dot" style="background:#4ade80;"></span><span>เข้า</span>
+                                <span class="sv-legend-dot" style="background:#fb923c;"></span><span>ออก</span>
+                            </div>
+                        </div>
+                        <div class="sv-chart-area"><canvas id="sv-bar-chart"></canvas></div>
+                    </div>
+                    <div class="sv-box">
+                        <div class="sv-box-header">
+                            <span class="sv-box-title">📋 ประวัติล่าสุด</span>
+                            <span class="sv-record-count">แสดง <b id="sv-log-count">0</b> รายการ</span>
+                        </div>
+                        <div class="sv-table-wrap">
+                            <table class="sv-table">
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>เวลา</th>
+                                        <th>ทิศทาง</th>
+                                        <th>กล้อง</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="sv-log-body">
+                                    <tr class="sv-empty-row">
+                                        <td colspan="4">รอข้อมูล...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             </div>
-
         </div>
-    </div>
 
-    <script src="script.js"></script>
+        <script src="script.js"></script>
 
 </body>
+
 </html>

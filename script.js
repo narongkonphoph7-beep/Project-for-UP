@@ -121,10 +121,10 @@ async function updateGraph() {
             // รอบต่อๆ ไป ให้เอายอดปัจจุบัน ลบด้วย ยอดของชั่วโมงที่แล้ว
             carsInThisPeriod = currentIn - state.prevTotalIn;
             carsOutThisPeriod = currentOut - state.prevTotalOut;
-            
+
             // ป้องกันกราฟติดลบ กรณีสั่งรีสตาร์ทเซิร์ฟเวอร์
-            if(carsInThisPeriod < 0) carsInThisPeriod = currentIn; 
-            if(carsOutThisPeriod < 0) carsOutThisPeriod = currentOut;
+            if (carsInThisPeriod < 0) carsInThisPeriod = currentIn;
+            if (carsOutThisPeriod < 0) carsOutThisPeriod = currentOut;
         }
 
 
@@ -169,7 +169,104 @@ updateGraph();
 setInterval(updateNumbers, 1000);
 
 // กราฟ: ให้อัปเดตทุกๆ 1 ชั่วโมง (3,600,000 มิลลิวินาที)
-setInterval(updateGraph, 30000); 
+setInterval(updateGraph, 30000);
 
 // 💡 คำแนะนำสำหรับการทดสอบพรีเซนต์: 
 // ถ้าไม่อยากรอ 1 ชั่วโมงเพื่อดูกราฟขยับ ให้เปลี่ยนเลข 3600000 ด้านบนเป็น 60000 (1 นาที) ดูก่อนได้ครับ
+
+// ══ STATS VIEW ════════════════════════════════
+let svBarChart = null;
+
+function initSvBarChart() {
+    if (svBarChart) return;
+    svBarChart = new Chart(document.getElementById('sv-bar-chart').getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels: [],
+            datasets: [
+                { label: 'รถเข้า', data: [], backgroundColor: 'rgba(74,222,128,0.55)', borderColor: '#4ade80', borderWidth: 1, borderRadius: 4 },
+                { label: 'รถออก', data: [], backgroundColor: 'rgba(251,146,60,0.55)', borderColor: '#fb923c', borderWidth: 1, borderRadius: 4 }
+            ]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            scales: {
+                x: { grid: { color: '#2a2a2c' }, ticks: { color: '#666', font: { size: 10 } } },
+                y: { grid: { color: '#2a2a2c' }, ticks: { color: '#666', font: { size: 10 } }, beginAtZero: true }
+            },
+            plugins: { legend: { display: false } }
+        }
+    });
+}
+
+function switchView(viewName) {
+    const dashView = document.getElementById('dashboard-view');
+    const statsView = document.getElementById('stats-view');
+    const statsBtn = document.querySelector('.stats-btn');
+    const camBtns = document.querySelectorAll('.BUT:not(.stats-btn)');
+
+    if (viewName === 'stats') {
+        dashView.style.display = 'none';
+        statsView.style.display = 'flex';
+        statsBtn.classList.add('active');
+        statsBtn.classList.remove('inactive');
+        camBtns.forEach(b => { b.classList.remove('active'); b.classList.add('inactive'); });
+        initSvBarChart();
+        updateStatsView();
+    } else {
+        dashView.style.display = 'flex';
+        statsView.style.display = 'none';
+        statsBtn.classList.remove('active');
+        statsBtn.classList.add('inactive');
+        camBtns.forEach(b => {
+            const n = b.innerText.includes('1') ? 1 : 2;
+            b.classList.toggle('active', n === currentCamera);
+            b.classList.toggle('inactive', n !== currentCamera);
+        });
+    }
+}
+
+async function updateStatsView() {
+    try {
+        const res = await fetch(`/api/data?camera=${currentCamera}`);
+        const data = await res.json();
+
+        document.getElementById('sv-total-in').textContent = data.total_in;
+        document.getElementById('sv-total-out').textContent = data.total_out;
+        document.getElementById('sv-net').textContent = Math.max(0, data.total_in - data.total_out);
+        document.getElementById('sv-last-in').textContent = data.last_in_time || '--:--:--';
+        document.getElementById('sv-last-out').textContent = data.last_out_time || '--:--:--';
+
+        // sync bar chart กับ vehicleChart
+        if (svBarChart && vehicleChart.data.labels.length > 0) {
+            svBarChart.data.labels = [...vehicleChart.data.labels];
+            svBarChart.data.datasets[0].data = [...vehicleChart.data.datasets[0].data];
+            svBarChart.data.datasets[1].data = [...vehicleChart.data.datasets[1].data];
+            svBarChart.update();
+        }
+
+        const logs = data.recent_logs || [];
+        const tbody = document.getElementById('sv-log-body');
+        document.getElementById('sv-log-count').textContent = logs.length;
+        if (logs.length === 0) {
+            tbody.innerHTML = '<tr class="sv-empty-row"><td colspan="4">ยังไม่มีประวัติ</td></tr>';
+            return;
+        }
+        tbody.innerHTML = logs.map((log, i) => {
+            const isIn = log.type === 'IN';
+            return `<tr>
+                <td class="sv-row-num">${i + 1}</td>
+                <td class="sv-time-cell">${log.time}</td>
+                <td><span class="sv-badge ${isIn ? 'sv-badge-in' : 'sv-badge-out'}">
+                    <span class="sv-dot ${isIn ? 'sv-dot-in' : 'sv-dot-out'}"></span>
+                    ${isIn ? '↓ IN' : '↑ OUT'}
+                </span></td>
+                <td style="color:#666;font-size:11px;">CAM ${currentCamera}</td>
+            </tr>`;
+        }).join('');
+    } catch (e) { console.error('updateStatsView:', e); }
+}
+
+setInterval(() => {
+    if (document.getElementById('stats-view').style.display !== 'none') updateStatsView();
+}, 2000);
