@@ -7,7 +7,7 @@ import time
 import datetime
 from collections import deque
 
-DB_URI = 'postgresql://neondb_owner:npg_pXZRfEhvq85k@ep-shy-morning-a10m07ah-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require'
+DB_URI = ''
 
 IP_WEBCAM_URL_1 = 0
 IP_WEBCAM_URL_2 = 0
