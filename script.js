@@ -1,3 +1,4 @@
+let currentCamera = 1;
 // ตั้งค่ากราฟ Chart.js
 const ctx = document.getElementById('vehicleChart').getContext('2d');
 const vehicleChart = new Chart(ctx, {
@@ -38,29 +39,57 @@ const vehicleChart = new Chart(ctx, {
 
 // ฟังก์ชันสำหรับเปลี่ยนปุ่ม Active (Gate 1 / Gate 2)
 function setActive(button) {
-    document.querySelectorAll('.BUT').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('.BUT').forEach(btn => {
+        btn.classList.remove('active');
+        btn.classList.add('inactive');
+    });
+    button.classList.remove('inactive');
     button.classList.add('active');
+
+    // เปลี่ยน video feed ตามกล้องที่เลือก
+    currentCamera = button.innerText.includes('1') ? 1 : 2;
+    document.querySelector('.video-REAL').src = `/video_feed?camera=${currentCamera}`;
+    vehicleChart.data.labels = [];
+    vehicleChart.data.datasets[0].data = [];
+    vehicleChart.data.datasets[1].data = [];
+    vehicleChart.update();
+    updateGraph();
 }
 
-// ตัวแปรเก็บยอดสะสมรอบที่แล้ว เพื่อเอามาคำนวณ "จำนวนรถเฉพาะชั่วโมงนี้"
-let prevTotalIn = 0;
-let prevTotalOut = 0;
-let isFirstGraphUpdate = true;
+function toggleMenu() {
+    document.querySelector('.sidebar').classList.toggle('open');
+    document.querySelectorAll('.menu-item').forEach(item => {
+        item.classList.toggle('show');
+    });
+}
+
+// ตัวแปรเก็บยอดสะสมรอบที่แล้ว เพื่อเอามาคำนวณ "จำนวนรถเฉพาะชั่วโมงนี้" **แบบแยกกล้อง
+const cameraState = {
+    1: { prevTotalIn: 0, prevTotalOut: 0, isFirstGraphUpdate: true },
+    2: { prevTotalIn: 0, prevTotalOut: 0, isFirstGraphUpdate: true }
+};
 
 // ==========================================
 // 1. ฟังก์ชันอัปเดต "ตัวเลข" (ทำทุก 1 วินาที)
 // ==========================================
 async function updateNumbers() {
     try {
-        const response = await fetch('/api/data');
+        const response = await fetch(`/api/data?camera=${currentCamera}`);
         const data = await response.json();
 
         // อัปเดตตัวเลขสะสม
         document.getElementById('car-in').innerText = data.total_in;
         document.getElementById('car-out').innerText = data.total_out;
 
+        // เพิ่มฟังก์ชัน ถ้าข้อมูลขึ้น(กำลังทำงาน/Active) จะขึ้นเป็นปุ่มสีเขียว ถ้า error จะขึ้นปุ่มสีแดง 
+        setStatus('status-in', true);
+        setStatus('status-out', true);
+
     } catch (error) {
         console.error("Error fetching numbers:", error);
+        // ถ้า fetch error = inactive (red)
+        setStatus('status-in', false);
+        setStatus('status-out', false);
     }
 }
 
@@ -69,7 +98,7 @@ async function updateNumbers() {
 // ==========================================
 async function updateGraph() {
     try {
-        const response = await fetch('/api/data');
+        const response = await fetch(`/api/data?camera=${currentCamera}`);
         const data = await response.json();
 
         // ดึงเวลาปัจจุบัน (เอาแค่ ชั่วโมง:นาที เช่น "14:00")
@@ -82,24 +111,26 @@ async function updateGraph() {
         let carsInThisPeriod = 0;
         let carsOutThisPeriod = 0;
 
-        if (isFirstGraphUpdate) {
+        const state = cameraState[currentCamera]
+        if (state.isFirstGraphUpdate) {
             // รอบแรกที่เปิดเว็บ ให้โชว์ยอดสะสมทั้งหมดไปก่อน
             carsInThisPeriod = currentIn;
             carsOutThisPeriod = currentOut;
-            isFirstGraphUpdate = false;
+            state.isFirstGraphUpdate = false;
         } else {
             // รอบต่อๆ ไป ให้เอายอดปัจจุบัน ลบด้วย ยอดของชั่วโมงที่แล้ว
-            carsInThisPeriod = currentIn - prevTotalIn;
-            carsOutThisPeriod = currentOut - prevTotalOut;
+            carsInThisPeriod = currentIn - state.prevTotalIn;
+            carsOutThisPeriod = currentOut - state.prevTotalOut;
             
             // ป้องกันกราฟติดลบ กรณีสั่งรีสตาร์ทเซิร์ฟเวอร์
             if(carsInThisPeriod < 0) carsInThisPeriod = currentIn; 
             if(carsOutThisPeriod < 0) carsOutThisPeriod = currentOut;
         }
 
+
         // เก็บยอดปัจจุบันไว้ลบในรอบถัดไป
-        prevTotalIn = currentIn;
-        prevTotalOut = currentOut;
+        state.prevTotalIn = currentIn;
+        state.prevTotalOut = currentOut;
 
         // แสดงกราฟย้อนหลังสูงสุด 24 จุด (24 ชั่วโมง)
         if (vehicleChart.data.labels.length >= 24) {
@@ -117,6 +148,13 @@ async function updateGraph() {
     } catch (error) {
         console.error("Error updating graph:", error);
     }
+}
+
+function setStatus(id, isActive) {
+    const badge = document.getElementById(id);
+    badge.className = 'status-badge ' + (isActive ? 'active' : 'inactive');
+    badge.innerText = isActive ? 'Active' : 'Inactive';
+
 }
 
 // ==========================================
