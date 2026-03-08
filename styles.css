@@ -1,3 +1,26 @@
+/*
+=======================================================
+  Detective Vehicle Dashboard — styles.css
+=======================================================
+  โครงสร้าง CSS แบ่งเป็นส่วนหลักๆ:
+
+  1. Base / Layout         → body, layout-container
+  2. Sidebar               → ปุ่มกล้องและเมนู
+  3. Dashboard View        → video, stat-box, graph
+  4. Stats View (หน้าสถิติ)
+     4.1 Header + Animation
+     4.2 KPI Cards
+     4.3 Camera Toggle     → ปุ่มสลับกล้อง
+     4.4 Date Picker       → เลือกช่วงเวลา
+     4.5 History Chart     → กราฟย้อนหลัง
+     4.6 Bottom Row        → กราฟ session + ตาราง log
+=======================================================
+*/
+
+
+/* ══════════════════════════════════════════════════
+   1. BASE / LAYOUT
+══════════════════════════════════════════════════ */
 body {
     margin: 0;
     padding: 0;
@@ -6,13 +29,21 @@ body {
     color: white;
 }
 
+/* layout-container ใช้ flexbox แบบ row
+   sidebar อยู่ซ้าย, main-content อยู่ขวาและขยายเต็มพื้นที่ */
 .layout-container {
     display: flex;
     height: 100vh;
     overflow: hidden;
 }
 
-/* ─── กล่องควบคุมแถบด้านซ้ายทั้งหมดตอนปิดอยู่ ─────────────────────────────── */
+
+/* ══════════════════════════════════════════════════
+   2. SIDEBAR
+══════════════════════════════════════════════════ */
+
+/* ตอนปิด sidebar กว้าง 30px (เห็นแค่ไอคอน ☰)
+   ตอนเปิด (.open) จะขยายเป็น 150px ด้วย transition */
 .sidebar {
     width: 30px;
     background-color: #2c2c2e;
@@ -27,7 +58,6 @@ body {
     overflow: hidden;
 }
 
-
 .menu-icon {
     font-size: 24px;
     font-weight: bold;
@@ -36,7 +66,8 @@ body {
     cursor: pointer;
 }
 
-/* ─── Effect ตอน Sidebar show menu ─────────────────────────────── */
+/* menu-item ซ่อนอยู่ตอนแรก (max-height: 0, opacity: 0)
+   เมื่อ sidebar.open → .menu-item.show จะปรากฏขึ้น */
 .menu-item {
     display: block;
     max-height: 0;
@@ -45,20 +76,16 @@ body {
     transition: max-height 0.3s ease, opacity 0.3s ease;
 }
 
-/* ปรับความสูงของรายการเมนู */
 .menu-item.show {
     max-height: 120px;
     opacity: 1;
 }
 
-/* ปรับความกว้างของ Sidebar เมื่อเปิดใช้งาน */
 .sidebar.open {
     width: 150px;
 }
 
-
-
-/* ปรับกล่องเลือกกล้อง */
+/* ปุ่มเลือกกล้อง (Camera 1 / Camera 2 / 📊 สถิติ) */
 .BUT {
     background: none;
     border: 1px solid #555;
@@ -72,15 +99,16 @@ body {
     font-size: 18px;
 }
 
+/* กล้องที่กำลังเลือกอยู่ */
 .BUT.active {
     background-color: #620094;
     color: white;
     border-color: #620094;
     padding: 20px;
     margin-top: 10px;
-
 }
 
+/* กล้องที่ไม่ได้เลือก */
 .BUT.inactive {
     background-color: #1a1a1d;
     color: white;
@@ -93,7 +121,19 @@ body {
     opacity: 0.85;
 }
 
-/* ─── Main Content ────────────────────────── */
+/* ปุ่มสถิติตอน active ใช้สีน้ำเงิน (ต่างจากกล้องที่ใช้ม่วง) */
+.BUT.stats-btn.active {
+    background-color: #0f2744;
+    border-color: #2563eb;
+    color: #60a5fa;
+}
+
+
+/* ══════════════════════════════════════════════════
+   3. DASHBOARD VIEW
+══════════════════════════════════════════════════ */
+
+/* ─── Main Content ──────────────────────────── */
 .main-content {
     flex: 1;
     padding: 12px;
@@ -103,7 +143,7 @@ body {
     overflow: hidden;
 }
 
-/* ─── Top Section ─────────────────────────── */
+/* ─── Top Section: Video + Stat Boxes ──────── */
 .top-section {
     display: flex;
     gap: 20px;
@@ -111,7 +151,7 @@ body {
     min-height: 0;
 }
 
-/* ─── Video ───────────────────────────────── */
+/* กล่องวิดีโอ flex:2 → กว้างกว่า stat box (flex:1) */
 .video-box {
     flex: 2;
     background: black;
@@ -132,13 +172,14 @@ body {
     align-items: center;
 }
 
+/* object-fit: contain → ไม่บิดเบือนภาพแม้ขนาดหน้าจอต่างกัน */
 .video-REAL {
     width: 100%;
     height: 100%;
     object-fit: contain;
 }
 
-/* ─── Stats ───────────────────────────────── */
+/* กล่องสถิติ (รถเข้า / รถออก) */
 .stats-container {
     flex: 1;
     display: flex;
@@ -160,13 +201,17 @@ body {
     overflow: visible;
 }
 
+/* เส้นสีด้านซ้ายบอกทิศทาง */
 .stat-box-in {
     border-left: 4px solid #28a745;
 }
 
+/* เขียว = เข้า */
 .stat-box-out {
     border-left: 4px solid #dc3545;
 }
+
+/* แดง = ออก */
 
 .stat-header {
     display: flex;
@@ -227,16 +272,19 @@ body {
     color: #aaa;
 }
 
+/* ตัวเลขขนาดใหญ่ใน stat box
+   ใช้ !important เพราะ font-size ถูก override โดย .stat-body span */
 .number {
     font-size: 70px !important;
-    /* ใส่ !important เพราะปรับขนาดไม่ได้ */
     font-weight: bold;
     display: block;
     color: #fff;
     line-height: 0.79;
 }
 
-/* ─── Bottom Section (Graph) ──────────────── */
+/* ─── Bottom Section: กราฟ Real-time ───────── */
+/* height: 32% → ใช้พื้นที่ 1/3 ของหน้าจอ
+   ถ้าอยากให้กราฟใหญ่ขึ้นให้เพิ่มค่านี้ */
 .bottom-section {
     height: 32%;
     background: #2c2c2e;
@@ -264,6 +312,7 @@ body {
     flex-shrink: 0;
 }
 
+/* position: relative + canvas absolute → ทำให้ Chart.js responsive */
 .graph-area {
     flex: 1;
     position: relative;
@@ -305,7 +354,7 @@ body {
     background-color: #c8032e;
 }
 
-/* ─── Misc ────────────────────────────────── */
+/* ─── Misc ──────────────────────────────────── */
 .time-badge {
     padding: 2px 8px;
     border-radius: 4px;
@@ -315,7 +364,7 @@ body {
     display: inline-block;
 }
 
-/* ─── status badge ─────────────────────────── */
+/* badge สถานะกล้อง: เขียว = Active (fetch สำเร็จ), แดง = Inactive (fetch ล้มเหลว) */
 .status-badge {
     padding: 2px 10px;
     border-radius: 20px;
@@ -334,6 +383,7 @@ body {
     background-color: #dc3545 !important;
 }
 
+/* Scrollbar style สำหรับตาราง log เดิม */
 .table-responsive::-webkit-scrollbar {
     width: 5px;
 }
@@ -355,13 +405,14 @@ body {
     border-bottom: none;
 }
 
-/* ══ STATS VIEW ══════════════════════════════ */
-.BUT.stats-btn.active {
-    background-color: #0f2744;
-    border-color: #2563eb;
-    color: #60a5fa;
-}
 
+/* ══════════════════════════════════════════════════
+   4. STATS VIEW — หน้าสถิติ
+══════════════════════════════════════════════════ */
+
+/* ─── 4.1 Header + Slide-in Animation ──────── */
+
+/* stats-view scroll ได้ตามแนวตั้งถ้า content เกิน */
 #stats-view {
     display: flex;
     flex-direction: column;
@@ -370,6 +421,7 @@ body {
     overflow-y: auto;
     padding-right: 4px;
     animation: svSlideIn 0.3s ease;
+    /* animation เมื่อเปิดหน้าสถิติ */
 }
 
 #stats-view::-webkit-scrollbar {
@@ -381,6 +433,7 @@ body {
     border-radius: 5px;
 }
 
+/* slide ขึ้นพร้อม fade เมื่อเปิดหน้าสถิติ */
 @keyframes svSlideIn {
     from {
         opacity: 0;
@@ -435,6 +488,7 @@ body {
     display: block;
 }
 
+/* badge "Live Data" มุมขวาบน */
 .sv-live-badge {
     display: flex;
     align-items: center;
@@ -448,6 +502,7 @@ body {
     font-weight: 600;
 }
 
+/* จุดกะพริบสีเขียวใน badge */
 .sv-pulse-dot {
     width: 7px;
     height: 7px;
@@ -471,6 +526,11 @@ body {
     }
 }
 
+
+/* ─── 4.2 KPI Cards ─────────────────────────── */
+
+/* 5 การ์ดเรียงในแนวนอน
+   ถ้าจอเล็กและการ์ดแน่น ให้ลด gap หรือเปลี่ยนเป็น repeat(3, 1fr) */
 .sv-cards-row {
     display: grid;
     grid-template-columns: repeat(5, 1fr);
@@ -495,6 +555,7 @@ body {
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
 }
 
+/* เส้นสีด้านซ้ายของแต่ละการ์ด */
 .sv-card-green {
     border-left: 3px solid #28a745;
 }
@@ -532,6 +593,7 @@ body {
     margin-bottom: 4px;
 }
 
+/* การ์ดที่แสดงเวลา (เข้าล่าสุด/ออกล่าสุด) ใช้ font เล็กกว่า */
 .sv-card-time-val {
     font-size: 22px !important;
 }
@@ -541,6 +603,8 @@ body {
     color: #555;
 }
 
+/* วงกลม blur ด้านขวาล่างของการ์ด (ลักษณะ glow)
+   สีกำหนดผ่าน inline style="background:#xxxx" ใน HTML */
 .sv-card-glow {
     position: absolute;
     width: 70px;
@@ -553,7 +617,316 @@ body {
     pointer-events: none;
 }
 
-.sv-charts-row {
+
+/* ─── 4.3 Camera Toggle ─────────────────────── */
+
+/* แถบสลับกล้อง: Camera 1 | Camera 2 | รวมทุกกล้อง
+   ถ้าต้องการเพิ่มกล้อง: เพิ่มปุ่มใน HTML และ case ใน switchCamera() */
+.sv-cam-toggle {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+    background: #232325;
+    border: 1px solid #2e2e30;
+    border-radius: 10px;
+    padding: 12px 16px;
+}
+
+.sv-cam-label {
+    font-size: 11px;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: .8px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.sv-cam-group {
+    display: flex;
+    background: #141416;
+    border: 1px solid #2a2a2c;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.sv-cam-btn {
+    background: transparent;
+    border: none;
+    color: #555;
+    padding: 8px 22px;
+    font-size: 13px;
+    font-weight: 700;
+    font-family: 'Sarabun', sans-serif;
+    cursor: pointer;
+    transition: all 0.18s;
+    border-right: 1px solid #232325;
+    white-space: nowrap;
+}
+
+.sv-cam-btn:last-child {
+    border-right: none;
+}
+
+.sv-cam-btn:hover:not(.active) {
+    background: #2a2a2c;
+    color: #aaa;
+}
+
+.sv-cam-btn.active {
+    background: #3b0070;
+    color: #d8b4fe;
+    font-weight: 800;
+}
+
+.sv-cam-btn.all.active {
+    background: #0f3320;
+    color: #4ade80;
+}
+
+/* "รวมทุกกล้อง" ใช้สีเขียว */
+
+.sv-cam-indicator {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: 8px;
+    font-size: 12px;
+    color: #888;
+}
+
+/* จุดสีบอกกล้องที่กำลังดูอยู่
+   cam1 (default) = เขียว, cam2 = ม่วง, all = เขียวกะพริบเร็ว */
+.sv-cam-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #28a745;
+    box-shadow: 0 0 6px #28a745;
+    animation: svPulse 1.6s infinite;
+}
+
+.sv-cam-dot.cam2 {
+    background: #a855f7;
+    box-shadow: 0 0 6px #a855f7;
+}
+
+.sv-cam-dot.all {
+    background: #4ade80;
+    box-shadow: 0 0 6px #4ade80;
+    animation: svPulse 0.8s infinite;
+}
+
+.sv-cam-name {
+    font-weight: 700;
+    color: #ccc;
+}
+
+
+/* ─── 4.4 Date Picker ───────────────────────── */
+
+/* แถวเลือกช่วงเวลา: dropdown ประเภท + input วันที่ + กล่องผลลัพธ์
+   ⚠️ input จะเปลี่ยนตาม dropdown (daily/monthly/yearly) ผ่าน onTypeChange() */
+.sv-datepicker-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 12px;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+    background: #232325;
+    border: 1px solid #2e2e30;
+    border-radius: 10px;
+    padding: 14px 16px;
+}
+
+.sv-dp-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.sv-dp-label {
+    font-size: 10px;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: .8px;
+    font-weight: 600;
+}
+
+/* style ร่วมสำหรับ dropdown และ input ทั้งหมด */
+.sv-dp-select,
+.sv-dp-input {
+    background: #141416;
+    border: 1px solid #333;
+    color: #ccc;
+    padding: 8px 12px;
+    border-radius: 7px;
+    font-size: 13px;
+    font-family: 'Sarabun', sans-serif;
+    outline: none;
+    height: 36px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    cursor: pointer;
+}
+
+.sv-dp-select {
+    min-width: 175px;
+}
+
+.sv-dp-input {
+    min-width: 158px;
+}
+
+.sv-dp-select:focus,
+.sv-dp-input:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+}
+
+.sv-dp-select option {
+    background: #1e1e20;
+}
+
+/* กล่องแสดงผลลัพธ์ (รถเข้า | รถออก | สุทธิ) */
+.sv-dp-result {
+    display: flex;
+    align-items: stretch;
+    background: #141416;
+    border: 1px solid #2a2a2c;
+    border-radius: 8px;
+    overflow: hidden;
+    margin-left: 4px;
+}
+
+.sv-dp-result-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 18px;
+    gap: 3px;
+}
+
+.sv-dp-result-label {
+    font-size: 10px;
+    color: #555;
+    text-transform: uppercase;
+    letter-spacing: .7px;
+}
+
+.sv-dp-result-value {
+    font-size: 24px;
+    font-weight: 800;
+    line-height: 1;
+    transition: all 0.3s;
+}
+
+/* สีตัวเลขผลลัพธ์ */
+.sv-dp-result-value.green {
+    color: #4ade80;
+}
+
+/* รถเข้า */
+.sv-dp-result-value.red {
+    color: #f87171;
+}
+
+/* รถออก */
+.sv-dp-result-value.purple {
+    color: #c084fc;
+}
+
+/* สุทธิ */
+
+.sv-dp-divider {
+    width: 1px;
+    background: #242426;
+    flex-shrink: 0;
+}
+
+/* สถานะการโหลดข้อมูลจาก /api/history */
+.sv-dp-status {
+    font-size: 11px;
+    color: #555;
+    margin-left: auto;
+    align-self: center;
+}
+
+.sv-dp-status.ok {
+    color: #28a745;
+}
+
+/* โหลดสำเร็จ */
+.sv-dp-status.loading {
+    color: #f59e0b;
+}
+
+/* กำลังโหลด */
+.sv-dp-status.error {
+    color: #f87171;
+}
+
+/* ไม่มีข้อมูล หรือ error */
+
+
+/* ─── 4.5 History Chart ─────────────────────── */
+
+/* กล่องกราฟแท่งย้อนหลัง (ดึงจาก /api/history)
+   height: 200px → ถ้าอยากให้กราฟใหญ่ขึ้นให้เพิ่มค่านี้ */
+.sv-history-box {
+    background: #232325;
+    border-radius: 10px;
+    border: 1px solid #2e2e30;
+    padding: 14px;
+    flex-shrink: 0;
+    height: 200px;
+    display: flex;
+    flex-direction: column;
+}
+
+/* wrapper สำหรับ canvas + overlay (ใช้ position relative/absolute) */
+.sv-history-chart-area {
+    flex: 1;
+    position: relative;
+    min-height: 0;
+}
+
+.sv-history-chart-area canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100% !important;
+    height: 100% !important;
+}
+
+/* overlay ซ้อนทับกราฟ:
+   - ตอนเริ่ม: "เลือกวันที่เพื่อแสดงกราฟ"
+   - ตอนโหลด: "กำลังโหลด..."
+   - ตอนไม่มีข้อมูล: "ไม่มีข้อมูลในช่วงเวลานี้" (สีเหลือง)
+   - ตอนมีข้อมูล: ซ่อนด้วย class .hidden */
+.sv-chart-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(35, 35, 37, .92);
+    font-size: 13px;
+    color: #555;
+    border-radius: 6px;
+    transition: opacity 0.25s;
+}
+
+.sv-chart-overlay.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+
+/* ─── 4.6 Bottom Row ────────────────────────── */
+
+/* 2 คอลัมน์เท่ากัน: กราฟ session (ซ้าย) | ตาราง log (ขวา) */
+.sv-bottom-row {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 12px;
@@ -561,6 +934,8 @@ body {
     min-height: 0;
 }
 
+/* กล่อง sv-box ใช้ทั้งกราฟ session และตาราง log
+   min-height: 180px → ป้องกันกล่องแบนเกินไปตอนหน้าจอเล็ก */
 .sv-box {
     background: #232325;
     border-radius: 10px;
@@ -568,7 +943,7 @@ body {
     padding: 14px;
     display: flex;
     flex-direction: column;
-    min-height: 260px;
+    min-height: 180px;
     overflow: hidden;
 }
 
@@ -610,6 +985,7 @@ body {
     color: #aaa;
 }
 
+/* canvas wrapper สำหรับกราฟ session */
 .sv-chart-area {
     flex: 1;
     position: relative;
@@ -624,6 +1000,9 @@ body {
     height: 100% !important;
 }
 
+/* ─── Log Table ─────────────────────────────── */
+
+/* scroll ได้ในแนวตั้งถ้า log เยอะ */
 .sv-table-wrap {
     flex: 1;
     overflow-y: auto;
@@ -645,6 +1024,7 @@ body {
     font-size: 12px;
 }
 
+/* header sticky ติดด้านบนตอน scroll */
 .sv-table thead th {
     position: sticky;
     top: 0;
@@ -690,6 +1070,7 @@ body {
     color: #999;
 }
 
+/* badge ทิศทาง IN / OUT */
 .sv-badge {
     display: inline-flex;
     align-items: center;
@@ -701,17 +1082,18 @@ body {
 }
 
 .sv-badge-in {
-    background: rgba(40, 167, 69, 0.13);
+    background: rgba(40, 167, 69, .13);
     color: #4ade80;
-    border: 1px solid rgba(40, 167, 69, 0.28);
+    border: 1px solid rgba(40, 167, 69, .28);
 }
 
 .sv-badge-out {
-    background: rgba(220, 53, 69, 0.13);
+    background: rgba(220, 53, 69, .13);
     color: #f87171;
-    border: 1px solid rgba(220, 53, 69, 0.28);
+    border: 1px solid rgba(220, 53, 69, .28);
 }
 
+/* จุดเล็กใน badge */
 .sv-dot {
     width: 5px;
     height: 5px;
@@ -729,9 +1111,15 @@ body {
     box-shadow: 0 0 4px #dc3545;
 }
 
+/* แถวว่าง "รอข้อมูล..." */
 .sv-empty-row td {
     text-align: center;
     color: #555;
     padding: 28px;
     font-size: 12px;
+}
+
+/* sv-charts-row เป็น class เดิมก่อนรีแบบ ซ่อนไว้เพื่อไม่กระทบ layout */
+.sv-charts-row {
+    display: none;
 }

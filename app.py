@@ -19,7 +19,10 @@ LINE_END = (1280, 200)
 
 app = Flask(__name__, template_folder='.', static_folder='.', static_url_path='')
 
-recent_logs = deque(maxlen=10)
+recent_logs = {
+    1: deque(maxlen=20),
+    2: deque(maxlen=20)
+}
 
 global_data = {
     1: {'total_in': 0, 'total_out': 0, 'last_in_time': '-', 'last_out_time': '-'},
@@ -90,7 +93,7 @@ def camera_worker(camera_index):
                         with lock:
                             global_data[camera_index]['total_in'] += 1
                             global_data[camera_index]['last_in_time'] = current_time
-                            recent_logs.appendleft({'time': current_time, 'type': 'IN'})
+                            recent_logs[camera_index].appendleft({'time': current_time, 'type': 'IN'})
                         count_changed = True
                         track_directions[track_id] = 'IN'
 
@@ -98,7 +101,7 @@ def camera_worker(camera_index):
                         with lock:
                             global_data[camera_index]['total_out'] += 1
                             global_data[camera_index]['last_out_time'] = current_time
-                            recent_logs.appendleft({'time': current_time, 'type': 'OUT'})
+                            recent_logs[camera_index].appendleft({'time': current_time, 'type': 'OUT'})
                         count_changed = True
                         track_directions[track_id] = 'OUT'
 
@@ -164,7 +167,7 @@ def api_data():
             'total_out': global_data[camera]['total_out'],
             'last_in_time': global_data[camera]['last_in_time'],
             'last_out_time': global_data[camera]['last_out_time'],
-            'recent_logs': list(recent_logs)
+            'recent_logs': list(recent_logs[camera])
         })
 
 #  รันกล้องทั้ง 2 ตัวใน Thread แยก ตั้งแต่เริ่มต้น

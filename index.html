@@ -1,18 +1,35 @@
 <!DOCTYPE html>
 <html lang="th">
 
+<!--
+โครงสร้างหลักของหน้าเว็บแบ่งออกเป็น 2 ส่วนใหญ่ๆ:
+
+  1) #dashboard-view  → หน้าหลัก (กล้อง + ตัวเลข + กราฟ real-time)
+  2) #stats-view      → หน้าสถิติ (toggle กล้อง, date picker, กราฟย้อนหลัง)
+
+  การสลับระหว่างสองหน้านี้ทำโดย switchView() ใน script.js
+  โดยใช้ display:none / display:flex แทนการ reload หน้า
+  เพื่อให้ video stream ไม่ถูกรบกวน
+=======================================================
+-->
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Detective Vehicle Dashboard</title>
     <link rel="stylesheet" href="styles.css">
+    <!-- Chart.js สำหรับกราฟทั้งหมดในระบบ -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
 <body>
 
+    <!-- ══ Layout หลัก: Sidebar + Main Content ══════════════════════ -->
     <div class="layout-container">
 
+        <!-- ── Sidebar: ปุ่มเลือกกล้องและเมนู ──────────────────────
+             ปุ่ม Camera 1 / Camera 2 เรียก setActive() เพื่อสลับ video feed
+             ปุ่ม 📊 สถิติ เรียก switchView('stats') เพื่อเปิดหน้าสถิติ     -->
         <div class="sidebar">
             <div class="menu-icon" onclick="toggleMenu()">☰</div>
             <div class="menu-item">
@@ -26,23 +43,37 @@
             </div>
         </div>
 
+        <!-- ══ Main Content ══════════════════════════════════════════ -->
         <div class="main-content">
+
+            <!-- ────────────────────────────────────────────────────────
+                 #dashboard-view — หน้าหลัก (แสดงตอนเปิดเว็บ)
+                 ประกอบด้วย: video stream + กล่องตัวเลข + กราฟ real-time
+            ──────────────────────────────────────────────────────────── -->
             <div id="dashboard-view" style="display:flex; flex-direction:column; gap:12px; height:100%;">
+
+                <!-- ── Top Section: Video + ตัวเลขสถิติ ────────────── -->
                 <div class="top-section">
 
+                    <!-- Video Stream: ดึงจาก Flask route /video_feed
+                         ถ้าอยากเปลี่ยน resolution ให้แก้ใน app.py ฝั่ง generate_frames() -->
                     <div class="video-box">
                         <div class="video-container">
                             <img src="{{ url_for('video_feed') }}" class="video-REAL" alt="CCTV Stream">
                         </div>
                     </div>
 
+                    <!-- กล่องตัวเลข: รถเข้า / รถออก (อัปเดตทุก 1 วินาที)
+                         id="car-in" และ id="car-out" ถูกอัปเดตโดย updateNumbers() ใน script.js -->
                     <div class="stats-container">
 
+                        <!-- กล่องรถเข้า -->
                         <div class="stat-box stat-box-in">
                             <div class="stat-header">
                                 <span>รถเข้า (IN)</span>
                                 <div class="rate-box">
                                     <p>สถานะ</p>
+                                    <!-- status-in: เขียว = Active, แดง = Inactive (fetch error) -->
                                     <div id="status-in" class="status-badge active">Active</div>
                                 </div>
                             </div>
@@ -53,11 +84,13 @@
                             </div>
                         </div>
 
+                        <!-- กล่องรถออก -->
                         <div class="stat-box stat-box-out">
                             <div class="stat-header">
                                 <span>รถออก (OUT)</span>
                                 <div class="rate-box">
                                     <p>สถานะ</p>
+                                    <!-- status-out: เขียว = Active, แดง = Inactive (fetch error) -->
                                     <div id="status-out" class="status-badge active">Active</div>
                                 </div>
                             </div>
@@ -69,8 +102,11 @@
                         </div>
 
                     </div>
-                </div>
+                </div><!-- /top-section -->
 
+                <!-- ── Bottom Section: กราฟ Real-time ───────────────────
+                     กราฟนี้ใช้ Chart.js id="vehicleChart" อัปเดตทุก 30 วินาที
+                     ถ้าอยากเปลี่ยน interval ให้แก้ setInterval(updateGraph, 30000) ใน script.js -->
                 <div class="bottom-section">
                     <div class="graph-box">
                         <div class="graph-header">
@@ -81,36 +117,79 @@
                             <canvas id="vehicleChart"></canvas>
                         </div>
                     </div>
-
                     <div class="graph-legend">
                         <div><span class="color-box blue"></span> จำนวนรถเข้า</div>
                         <div><span class="color-box red"></span> จำนวนรถออก</div>
                     </div>
                 </div>
 
-            </div>
+            </div><!-- /#dashboard-view -->
+
+
+            <!-- ────────────────────────────────────────────────────────
+                 #stats-view — หน้าสถิติ (ซ่อนอยู่ตอนแรก)
+                 เปิดโดย switchView('stats') / ปิดโดย switchView('dashboard')
+
+                 โครงสร้างภายใน:
+                   1. sv-header          → หัวข้อ + ปุ่มกลับ
+                   2. sv-cam-toggle      → สลับดู Camera 1 / Camera 2 / รวม
+                   3. sv-cards-row       → KPI 5 การ์ด (live data)
+                   4. sv-datepicker-row  → เลือกช่วงเวลาดูสถิติย้อนหลัง
+                   5. sv-history-box     → กราฟแท่งย้อนหลัง (จาก /api/history)
+                   6. sv-bottom-row      → กราฟ session + ตาราง log ล่าสุด
+            ──────────────────────────────────────────────────────────── -->
             <div id="stats-view" style="display:none;">
+
+                <!-- 1. Header ──────────────────────────────────────── -->
                 <div class="sv-header">
                     <button class="sv-back-btn" onclick="switchView('dashboard')">← กลับหน้าหลัก</button>
                     <div class="sv-title-block">
                         <h1 class="sv-title">Vehicle Statistics</h1>
-                        <span class="sv-subtitle">สรุปข้อมูลการตรวจจับยานพาหนะ Real-time</span>
+                        <!-- sv-subtitle ถูกอัปเดตโดย switchCamera() ใน script.js -->
+                        <span class="sv-subtitle" id="sv-subtitle">สรุปข้อมูลการตรวจจับยานพาหนะ — Camera 1</span>
                     </div>
                     <div class="sv-live-badge"><span class="sv-pulse-dot"></span> Live Data</div>
                 </div>
+
+                <!-- 2. Camera Toggle ────────────────────────────────────
+                     switchCamera(1/2/'all') ใน script.js จัดการ:
+                       - อัปเดต KPI cards
+                       - อัปเดตตาราง log (แยกหรือรวมกล้อง)
+                       - reset history chart
+                     ถ้าอยากเพิ่มกล้อง: เพิ่มปุ่มที่นี่ + เพิ่ม case ใน switchCamera() -->
+                <div class="sv-cam-toggle">
+                    <span class="sv-cam-label">กล้องที่ดู :</span>
+                    <div class="sv-cam-group">
+                        <button type="button" class="sv-cam-btn active" id="cam-btn-1" onclick="switchCamera(1)">📷
+                            Camera 1</button>
+                        <button type="button" class="sv-cam-btn" id="cam-btn-2" onclick="switchCamera(2)">📷 Camera
+                            2</button>
+                        <button type="button" class="sv-cam-btn all" id="cam-btn-all" onclick="switchCamera('all')">⊕
+                            รวมทุกกล้อง</button>
+                    </div>
+                    <!-- dot สีเปลี่ยนตามกล้อง: เขียว=cam1, ม่วง=cam2, เขียวกะพริบ=all -->
+                    <div class="sv-cam-indicator">
+                        <span class="sv-cam-dot" id="sv-cam-dot"></span>
+                        <span class="sv-cam-name" id="sv-cam-name">Camera 1</span>
+                    </div>
+                </div>
+
+                <!-- 3. KPI Cards (Live Data) ──────────────────────────────
+                     ค่าเหล่านี้อัปเดตจาก /api/data ทุก 2 วินาที ผ่าน updateStatsView() -->
                 <div class="sv-cards-row">
                     <div class="sv-card sv-card-green">
                         <div class="sv-card-label">ยอดรวมรถเข้า</div>
                         <div class="sv-card-value" id="sv-total-in">0</div>
-                        <div class="sv-card-unit">คัน</div>
+                        <div class="sv-card-unit">คัน (Live)</div>
                         <div class="sv-card-glow" style="background:#28a745;"></div>
                     </div>
                     <div class="sv-card sv-card-red">
                         <div class="sv-card-label">ยอดรวมรถออก</div>
                         <div class="sv-card-value" id="sv-total-out">0</div>
-                        <div class="sv-card-unit">คัน</div>
+                        <div class="sv-card-unit">คัน (Live)</div>
                         <div class="sv-card-glow" style="background:#dc3545;"></div>
                     </div>
+                    <!-- สุทธิ = IN - OUT = รถที่ยังอยู่ในพื้นที่ขณะนี้ -->
                     <div class="sv-card sv-card-purple">
                         <div class="sv-card-label">รถภายในพื้นที่</div>
                         <div class="sv-card-value" id="sv-net">0</div>
@@ -130,17 +209,93 @@
                         <div class="sv-card-glow" style="background:#3b82f6;"></div>
                     </div>
                 </div>
-                <div class="sv-charts-row">
+
+                <!-- 4. Date Picker ──────────────────────────────────────────
+                     เลือกประเภท → input เปลี่ยนตาม onTypeChange()
+                     เลือกวันที่ → fetchHistoryByDate() เรียก /api/history
+                     ⚠️ /api/history ต้องรอ schema DB จากทีม backend ก่อน -->
+                <div class="sv-datepicker-row">
+                    <div class="sv-dp-group">
+                        <label class="sv-dp-label">ประเภทสถิติ</label>
+                        <select class="sv-dp-select" id="sv-type-select" onchange="onTypeChange()">
+                            <option value="daily">รายวัน (Daily)</option>
+                            <option value="monthly">รายเดือน (Monthly)</option>
+                            <option value="yearly">รายปี (Yearly)</option>
+                        </select>
+                    </div>
+                    <div class="sv-dp-group">
+                        <!-- label ถูกเปลี่ยนข้อความโดย onTypeChange() -->
+                        <label class="sv-dp-label" id="sv-dp-label">เลือกวันที่</label>
+                        <!-- แสดงแค่ input เดียวตามประเภทที่เลือก (อีก 2 ซ่อนอยู่) -->
+                        <input class="sv-dp-input" type="date" id="sv-input-date" oninput="fetchHistoryByDate()" />
+                        <input class="sv-dp-input" type="month" id="sv-input-month" oninput="fetchHistoryByDate()"
+                            style="display:none;" />
+                        <input class="sv-dp-input" type="number" id="sv-input-year" min="2020" max="2099"
+                            placeholder="เช่น 2026" oninput="fetchHistoryByDate()" style="display:none;" />
+                    </div>
+                    <!-- กล่องแสดงผลรวมของช่วงเวลาที่เลือก -->
+                    <div class="sv-dp-result">
+                        <div class="sv-dp-result-item">
+                            <span class="sv-dp-result-label">รถเข้า</span>
+                            <span class="sv-dp-result-value green" id="sv-dp-total-in">—</span>
+                        </div>
+                        <div class="sv-dp-divider"></div>
+                        <div class="sv-dp-result-item">
+                            <span class="sv-dp-result-label">รถออก</span>
+                            <span class="sv-dp-result-value red" id="sv-dp-total-out">—</span>
+                        </div>
+                        <div class="sv-dp-divider"></div>
+                        <div class="sv-dp-result-item">
+                            <span class="sv-dp-result-label">สุทธิ</span>
+                            <span class="sv-dp-result-value purple" id="sv-dp-net">—</span>
+                        </div>
+                    </div>
+                    <!-- สถานะการโหลด: loading (เหลือง) / ok (เขียว) / error (แดง) -->
+                    <span class="sv-dp-status" id="sv-dp-status"></span>
+                </div>
+
+                <!-- 5. History Chart ────────────────────────────────────────
+                     กราฟแท่งแสดงข้อมูลย้อนหลังตามช่วงเวลาที่เลือก
+                     ดึงข้อมูลจาก /api/history (app.py)
+                     overlay จะหายไปเมื่อมีข้อมูล (.hidden class)
+                     ถ้าไม่มีข้อมูล overlay เปลี่ยนเป็น "ไม่มีข้อมูลในช่วงเวลานี้" -->
+                <div class="sv-history-box">
+                    <div class="sv-box-header">
+                        <!-- sv-history-title ถูกอัปเดตโดย fetchHistoryByDate() -->
+                        <span class="sv-box-title" id="sv-history-title">📊 เลือกช่วงเวลาเพื่อดูกราฟ</span>
+                        <div class="sv-legend">
+                            <span class="sv-legend-dot" style="background:#4ade80;"></span><span>รถเข้า</span>&nbsp;
+                            <span class="sv-legend-dot" style="background:#fb923c;"></span><span>รถออก</span>
+                        </div>
+                    </div>
+                    <div class="sv-history-chart-area">
+                        <canvas id="sv-history-chart"></canvas>
+                        <!-- overlay ซ้อนทับกราฟ ซ่อนโดย class .hidden เมื่อมีข้อมูล -->
+                        <div class="sv-chart-overlay" id="sv-chart-overlay">📅 เลือกวันที่เพื่อแสดงกราฟ</div>
+                    </div>
+                </div>
+
+                <!-- 6. Bottom Row ───────────────────────────────────────────
+                     2 คอลัมน์: กราฟ session (ซ้าย) | ตาราง log ล่าสุด (ขวา) -->
+                <div class="sv-bottom-row">
+
+                    <!-- กราฟ Session: sync ข้อมูลจาก vehicleChart ใน dashboard
+                         แสดงยอดรถในแต่ละช่วงเวลาของ session ปัจจุบัน -->
                     <div class="sv-box">
                         <div class="sv-box-header">
-                            <span class="sv-box-title">📊 กราฟยอดรายช่วงเวลา (Session นี้)</span>
+                            <span class="sv-box-title">📈 กราฟ Session นี้</span>
                             <div class="sv-legend">
-                                <span class="sv-legend-dot" style="background:#4ade80;"></span><span>เข้า</span>
+                                <span class="sv-legend-dot" style="background:#4ade80;"></span><span>เข้า</span>&nbsp;
                                 <span class="sv-legend-dot" style="background:#fb923c;"></span><span>ออก</span>
                             </div>
                         </div>
                         <div class="sv-chart-area"><canvas id="sv-bar-chart"></canvas></div>
                     </div>
+
+                    <!-- ตาราง Log ล่าสุด: ดึงจาก recent_logs ใน app.py
+                         ถ้าดู "รวมทุกกล้อง" จะรวม log ทั้ง 2 กล้องเรียงตามเวลา
+                         ⚠️ log จะหายเมื่อ restart server (เพราะเก็บใน deque)
+                             ถ้าต้องการให้คงอยู่ ให้แก้ /api/data ให้ดึงจาก DB แทน -->
                     <div class="sv-box">
                         <div class="sv-box-header">
                             <span class="sv-box-title">📋 ประวัติล่าสุด</span>
@@ -156,6 +311,7 @@
                                         <th>กล้อง</th>
                                     </tr>
                                 </thead>
+                                <!-- sv-log-body ถูก render โดย updateStatsView() ใน script.js -->
                                 <tbody id="sv-log-body">
                                     <tr class="sv-empty-row">
                                         <td colspan="4">รอข้อมูล...</td>
@@ -164,11 +320,17 @@
                             </table>
                         </div>
                     </div>
-                </div>
-            </div>
-        </div>
 
-        <script src="script.js"></script>
+                </div><!-- /sv-bottom-row -->
+
+            </div><!-- /#stats-view -->
+
+        </div><!-- /.main-content -->
+
+    </div><!-- /.layout-container -->
+
+    <!-- script.js โหลดท้าย body เพื่อให้ DOM โหลดเสร็จก่อน -->
+    <script src="script.js"></script>
 
 </body>
 
